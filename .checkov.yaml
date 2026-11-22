@@ -1,0 +1,9 @@
+---
+framework:
+  - terraform
+soft-fail: true
+quiet: false
+compact: true
+output: cli
+download-external-modules: false
+evaluate-variables: true

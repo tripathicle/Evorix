@@ -1,0 +1,15 @@
+version: 0.1
+
+projects:
+  - path: environments/dev
+    name: enterprise-hub-spoke-dev
+    terraform_var_files:
+      - terraform.tfvars
+  - path: environments/staging
+    name: enterprise-hub-spoke-staging
+    terraform_var_files:
+      - terraform.tfvars
+  - path: environments/prod
+    name: enterprise-hub-spoke-prod
+    terraform_var_files:
+      - terraform.tfvars
