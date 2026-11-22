@@ -1,0 +1,66 @@
+name: "Terraform Validate & Lint"
+
+on:
+  pull_request:
+    branches: [ "main", "develop" ]
+    paths:
+      - "**.tf"
+      - "**.tfvars"
+      - ".github/workflows/**"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  validate:
+    name: "Validate & Lint"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "Setup Terraform"
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.14.6"
+
+      - name: "Terraform Format Check"
+        id: fmt
+        run: terraform fmt -check -recursive
+
+      - name: "Setup TFLint"
+        uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: "v0.50.0"
+
+      - name: "Init TFLint"
+        run: tflint --init --config=.tflint.hcl
+
+      - name: "Run TFLint"
+        run: tflint --recursive --config=.tflint.hcl
+
+      - name: "Validate Dev Environment"
+        run: |
+          cd environments/dev
+          terraform init -backend=false
+          terraform validate
+
+      - name: "Validate Staging Environment"
+        run: |
+          cd environments/staging
+          terraform init -backend=false
+          terraform validate
+
+      - name: "Validate Prod Environment"
+        run: |
+          cd environments/prod
+          terraform init -backend=false
+          terraform validate
+
+      - name: "Validate Backend Bootstrap"
+        run: |
+          cd bootstrap/terraform-backend
+          terraform init -backend=false
+          terraform validate

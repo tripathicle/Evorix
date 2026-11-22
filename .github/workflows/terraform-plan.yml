@@ -1,0 +1,59 @@
+name: "Terraform Plan"
+
+on:
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - "**.tf"
+      - "**.tfvars"
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  plan:
+    name: "Terraform Plan (Multi-Env)"
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [ "dev", "staging", "prod" ]
+
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "Azure OIDC Login"
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: "Setup Terraform"
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.14.6"
+
+      - name: "Terraform Init"
+        run: |
+          cd environments/${{ matrix.environment }}
+          terraform init
+
+      - name: "Terraform Plan"
+        id: plan
+        run: |
+          cd environments/${{ matrix.environment }}
+          terraform plan -no-color -var-file="terraform.tfvars" -out="${{ matrix.environment }}.tfplan"
+        continue-on-error: false
+
+      - name: "Generate Infracost Cost Estimate"
+        uses: infracost/actions/setup@v3
+        with:
+          api-key: ${{ secrets.INFRACOST_API_KEY }}
+
+      - name: "Run Infracost Breakdown"
+        run: |
+          infracost breakdown --path=environments/${{ matrix.environment }} --format=table
+        continue-on-error: true
